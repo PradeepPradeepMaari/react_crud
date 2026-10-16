@@ -27,3 +27,24 @@ export const updateEmployee = (id, formData) => {
 
 export const deleteEmployee = (id) =>
   api.delete(`${BASE}/${id}`).then((r) => r.data);
+
+
+export const exportEmployees = (params = {}) =>
+  api.get(`${BASE}/export`, {
+    params,
+    responseType: 'blob',
+  });
+
+
+export const importEmployees = (file, onUploadProgress) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post(`${BASE}/import`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress,
+  }).then((r) => r.data);
+};
+
+
+export const downloadImportTemplate = () =>
+  api.get(`${BASE}/import-template`, { responseType: 'blob' });

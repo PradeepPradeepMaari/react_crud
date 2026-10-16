@@ -2,8 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getEmployees, deleteEmployee } from '../api/employeeService';
+import {
+  getEmployees,
+  deleteEmployee,
+  exportEmployees,
+  downloadImportTemplate,
+} from '../api/employeeService';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ImportModal   from '../components/ImportModal';
 
 const QUALIFICATIONS = ['', "High School", "Diploma", "Bachelor's Degree", "Master's Degree", "PhD", "Other"];
 const PER_PAGE_OPTIONS = [10, 15, 25, 50];
@@ -37,6 +43,19 @@ function Avatar({ employee }) {
   return <Placeholder />;
 }
 
+function triggerBlobDownload(blobResponse, defaultFilename) {
+  const contentDisposition = blobResponse.headers?.['content-disposition'] || '';
+  const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+  const filename = match ? match[1].replace(/['"]/g, '') : defaultFilename;
+
+  const url  = URL.createObjectURL(new Blob([blobResponse.data]));
+  const link = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function EmployeeList() {
   const navigate = useNavigate();
 
@@ -52,8 +71,11 @@ export default function EmployeeList() {
   const [page,          setPage]          = useState(1);
   const [perPage,       setPerPage]       = useState(15);
 
-  const [toDelete,      setToDelete]      = useState(null);
-  const [deleting,      setDeleting]      = useState(false);
+  const [toDelete,    setToDelete]    = useState(null);
+  const [deleting,    setDeleting]    = useState(false);
+  const [exporting,   setExporting]   = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [showImport,  setShowImport]  = useState(false);
 
   const searchTimer = useRef(null);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -88,7 +110,6 @@ export default function EmployeeList() {
   }, [debouncedSearch, qualification, sortBy, sortDir, perPage, page]);
 
   useEffect(() => { fetchEmployees(); }, [fetchEmployees]);
-
   useEffect(() => { setPage(1); }, [qualification, perPage]);
 
   const handleSort = (field) => {
@@ -111,13 +132,48 @@ export default function EmployeeList() {
     }
   };
 
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    const toastId = toast.loading('Generating Excel export…');
+    try {
+      const response = await exportEmployees({
+        search:        debouncedSearch || undefined,
+        qualification: qualification   || undefined,
+        sort_by:       sortBy,
+        sort_dir:      sortDir,
+      });
+      triggerBlobDownload(response, `employees_${Date.now()}.xlsx`);
+      toast.success('Export downloaded successfully!', { id: toastId });
+    } catch (err) {
+      toast.error('Export failed. Please try again.', { id: toastId });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const response = await downloadImportTemplate();
+      triggerBlobDownload(response, 'employee_import_template.xlsx');
+      toast.success('Template downloaded!');
+    } catch {
+      toast.error('Could not download template. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleImportSuccess = () => { fetchEmployees(); };
 
   const cols = [
-    { key: 'firstname',   label: 'Name'        },
-    { key: 'email',       label: 'Email'       },
-    { key: 'phone',       label: 'Phone'       },
+    { key: 'firstname',               label: 'Name'      },
+    { key: 'email',                   label: 'Email'     },
+    { key: 'phone',                   label: 'Phone'     },
     { key: 'education_qualification', label: 'Education' },
-    { key: 'date_of_birth',           label: 'D.O.B'    },
+    { key: 'date_of_birth',           label: 'D.O.B'     },
   ];
 
   return (
@@ -127,13 +183,50 @@ export default function EmployeeList() {
           Employees
           <small>{meta ? `${meta.total} total` : ''}</small>
         </h1>
-        <Link to="/employees/create" className="btn btn-primary"><i className="bi bi-plus-lg"></i> Add Employee</Link>
+
+        <div className="page-header-actions">
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleDownloadTemplate}
+            disabled={downloading}
+            title="Download Import Template"
+            id="download-template-btn"
+          >
+            {downloading
+              ? <><span className="spinner-sm" /> Downloading…</>
+              : <><i className="bi bi-file-earmark-arrow-down" /> Import Template</>}
+          </button>
+
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowImport(true)}
+            title="Import from Excel"
+            id="import-excel-btn"
+          >
+            <i className="bi bi-file-earmark-arrow-up" /> Import Excel
+          </button>
+
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleExport}
+            disabled={exporting}
+            title="Export to Excel"
+            id="export-excel-btn"
+          >
+            {exporting
+              ? <><span className="spinner-sm" /> Exporting…</>
+              : <><i className="bi bi-file-earmark-excel" /> Export Excel</>}
+          </button>
+
+          <Link to="/employees/create" className="btn btn-primary">
+            <i className="bi bi-plus-lg" /> Add Employee
+          </Link>
+        </div>
       </div>
 
       <div className="toolbar">
         <div className="search-wrap">
-          <span className="search-icon"><i className="bi bi-search"></i></span>
-          
+          <span className="search-icon"><i className="bi bi-search" /></span>
           <input
             className="search-input"
             type="text"
@@ -170,7 +263,7 @@ export default function EmployeeList() {
           <div className="state-loading"><div className="spinner" /><p>Loading employees…</p></div>
         ) : employees.length === 0 ? (
           <div className="state-empty">
-            <div className="state-empty-icon"><i className="bi bi-person-x"></i></div>
+            <div className="state-empty-icon"><i className="bi bi-person-x" /></div>
             <p>No employees found.</p>
             {(search || qualification) && (
               <button className="btn btn-ghost" style={{ marginTop: '.75rem' }} onClick={() => { setSearch(''); setQualification(''); }}>
@@ -210,9 +303,9 @@ export default function EmployeeList() {
                     <td>{emp.date_of_birth}</td>
                     <td>
                       <div className="action-btns">
-                        <button className="btn btn-ghost btn-sm btn-icon" title="View" onClick={() => navigate(`/employees/${emp.id}`)}><i className="bi bi-eye"></i></button>
-                        <button className="btn btn-ghost btn-sm btn-icon" title="Edit" onClick={() => navigate(`/employees/${emp.id}/edit`)}><i className="bi bi-pencil-square"></i></button>
-                        <button className="btn btn-ghost btn-sm btn-icon" title="Delete" style={{ color: 'var(--danger-h)' }} onClick={() => setToDelete(emp)}><i className="bi bi-trash3"></i></button>
+                        <button className="btn btn-ghost btn-sm btn-icon" title="View" onClick={() => navigate(`/employees/${emp.id}`)}><i className="bi bi-eye" /></button>
+                        <button className="btn btn-ghost btn-sm btn-icon" title="Edit" onClick={() => navigate(`/employees/${emp.id}/edit`)}><i className="bi bi-pencil-square" /></button>
+                        <button className="btn btn-ghost btn-sm btn-icon" title="Delete" style={{ color: 'var(--danger-h)' }} onClick={() => setToDelete(emp)}><i className="bi bi-trash3" /></button>
                       </div>
                     </td>
                   </tr>
@@ -252,6 +345,13 @@ export default function EmployeeList() {
           onConfirm={handleDelete}
           onCancel={() => setToDelete(null)}
           loading={deleting}
+        />
+      )}
+
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onSuccess={handleImportSuccess}
         />
       )}
     </div>

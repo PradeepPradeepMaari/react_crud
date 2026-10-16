@@ -359,3 +359,155 @@ td { padding: .85rem 1.1rem; color: var(--text-1); vertical-align: middle; }
   .main-nav { padding: 0 1rem; }
   .form-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Page header action group ──────────────────────────────────────────────── */
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Small spinner (inside buttons) ───────────────────────────────────────── */
+.spinner-sm {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .65s linear infinite;
+  vertical-align: middle;
+}
+
+/* ── Import Modal ─────────────────────────────────────────────────────────── */
+.import-modal {
+  max-width: 540px;
+  width: calc(100% - 2rem);
+}
+
+.import-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+/* Drop zone */
+.import-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.75rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  background: var(--bg-subtle);
+  user-select: none;
+}
+.import-dropzone:hover,
+.import-dropzone.has-file { border-color: var(--accent); background: rgba(99,102,241,.06); }
+.import-dropzone.has-error { border-color: var(--danger); }
+
+.import-file-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Upload progress bar */
+.import-progress-wrap {
+  position: relative;
+  height: 6px;
+  background: var(--bg-subtle);
+  border-radius: 999px;
+  margin-top: .75rem;
+  overflow: hidden;
+}
+.import-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-h));
+  border-radius: 999px;
+  transition: width .2s ease;
+}
+.import-progress-label {
+  position: absolute;
+  right: 0;
+  top: -1.35rem;
+  font-size: .7rem;
+  color: var(--text-2);
+}
+
+/* Confirm checkbox */
+.import-confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  margin-top: 1rem;
+  cursor: pointer;
+  font-size: .875rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.import-confirm-check input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Result panel */
+.import-result { display: flex; flex-direction: column; gap: .75rem; }
+
+.import-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .75rem;
+  margin-top: .25rem;
+}
+.summary-card {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .9rem .75rem;
+  text-align: center;
+}
+.summary-num   { font-size: 1.75rem; font-weight: 700; }
+.summary-label { font-size: .75rem; color: var(--text-2); margin-top: .15rem; }
+.summary-imported .summary-num { color: var(--success); }
+.summary-skipped  .summary-num { color: var(--danger-h); }
+
+.import-ok-msg {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .875rem;
+  color: var(--success);
+}
+
+/* Row error list */
+.import-errors-wrap {
+  background: rgba(239,68,68,.07);
+  border: 1px solid rgba(239,68,68,.25);
+  border-radius: var(--radius-sm);
+  padding: .9rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.import-errors-list { display: flex; flex-direction: column; gap: .5rem; }
+.import-error-row {
+  display: flex;
+  gap: .5rem;
+  font-size: .8rem;
+  line-height: 1.5;
+}
+.import-error-row-num {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--danger-h);
+  font-family: monospace;
+  white-space: nowrap;
+}
+.import-error-row ul { margin: 0; padding-left: 1.1rem; color: var(--text-2); }
